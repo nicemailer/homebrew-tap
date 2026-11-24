@@ -2,8 +2,7 @@ cask "nicemailer" do
   version "0.2.1"
   sha256 "fd92c9f8a9a389f5a4dca16708a48867c9105534f4bfe70b0fe6c6e6370a59cc"
 
-  url "https://github.com/nicemailer/nicemailer/releases/download/v#{version}/NiceMailer-#{version}.dmg",
-      verified: "github.com/nicemailer/nicemailer"
+  url "https://github.com/nicemailer/nicemailer/releases/download/v#{version}/NiceMailer-#{version}.dmg"
   name "NiceMailer"
   desc "Fast, calm, local-first email client for macOS"
   homepage "https://nicemailer.org"
@@ -12,8 +11,6 @@ cask "nicemailer" do
     url "https://github.com/nicemailer/nicemailer"
     strategy :github_latest
   end
-
-  license "AGPL-3.0-only"
 
   depends_on macos: ">= :sonoma"
 
