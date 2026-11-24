@@ -1,0 +1,71 @@
+# Refreshes Casks/nicemailer.rb from the latest release of
+# nicemailer/nicemailer: when the release version is newer than the cask's,
+# downloads the DMG, computes its SHA-256 and updates version and sha256.
+# Runs every hour and on demand (Actions tab, "Run workflow").
+name: Update the nicemailer cask
+
+on:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the tap
+        uses: actions/checkout@v4
+
+      - name: Read the latest release of nicemailer/nicemailer
+        id: release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # `gh release view` without a tag reads the latest non-prerelease.
+          TAG="$(gh release view --repo nicemailer/nicemailer --json tagName --jq '.tagName')"
+          case "$TAG" in
+            v[0-9]*.[0-9]*.[0-9]*) ;;
+            *) echo "Unexpected tag: $TAG" >&2; exit 1 ;;
+          esac
+          VERSION="${TAG#v}"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          # Same asset name as scripts/make-release.sh publishes.
+          echo "url=https://github.com/nicemailer/nicemailer/releases/download/${TAG}/NiceMailer-${VERSION}.dmg" >> "$GITHUB_OUTPUT"
+
+      - name: Skip when the cask is already up to date
+        id: check
+        run: |
+          CURRENT="$(sed -n 's/^  version "\(.*\)"$/\1/p' Casks/nicemailer.rb)"
+          echo "cask=$CURRENT release=${{ steps.release.outputs.version }}"
+          if [ "$CURRENT" = "${{ steps.release.outputs.version }}" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Download the DMG and compute its SHA-256
+        id: dmg
+        if: steps.check.outputs.skip != 'true'
+        run: |
+          curl --fail --silent --show-error --location -o nicemailer.dmg "${{ steps.release.outputs.url }}"
+          echo "sha256=$(sha256sum nicemailer.dmg | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+
+      - name: Update version and sha256 in the cask
+        if: steps.check.outputs.skip != 'true'
+        run: |
+          sed -i \
+            -e "s/^  version \".*\"$/  version \"${{ steps.release.outputs.version }}\"/" \
+            -e "s/^  sha256 \".*\"$/  sha256 \"${{ steps.dmg.outputs.sha256 }}\"/" \
+            Casks/nicemailer.rb
+          grep -E '^  (version|sha256) ' Casks/nicemailer.rb
+
+      - name: Commit and push the new cask
+        if: steps.check.outputs.skip != 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Casks/nicemailer.rb
+          git commit -m "nicemailer: update to ${{ steps.release.outputs.version }}"
+          git push
