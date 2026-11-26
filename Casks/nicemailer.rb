@@ -1,6 +1,6 @@
 cask "nicemailer" do
-  version "0.2.1"
-  sha256 "fd92c9f8a9a389f5a4dca16708a48867c9105534f4bfe70b0fe6c6e6370a59cc"
+  version "0.3.0"
+  sha256 "69b9c6c286307bbf9520a8d22459bf8bebdb223227adafded15e2ca492f6f4bd"
 
   url "https://github.com/nicemailer/nicemailer/releases/download/v#{version}/NiceMailer-#{version}.dmg"
   name "NiceMailer"
